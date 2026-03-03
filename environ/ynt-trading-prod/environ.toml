@@ -1,0 +1,19 @@
+[environ]
+name = "ynt-trading-prod"
+account = "1132272424860690"
+region = "cn-shanghai"
+alias = "应天prod"
+description = "应天云交易生产环境账号"
+code = "prod"
+
+[tags]
+environ = "ynt-trading-prod"
+region = "cn-shanghai"
+
+[environ.resources.oss.bucket.datalake]
+name = "{{ ref(environ.name) }}-datalake"
+tags = { resource_level = "Environ", name = "Datalake" }
+
+[environ.resources.oss.bucket.infralake]
+name = "{{ ref(environ.name) }}-infralake"
+tags = { resource_level = "Environ", name = "Infralake" }

@@ -1,0 +1,6 @@
+name: lake
+runtime: python
+description: YNT Cloud storage infrastructure using Pulumi
+
+# ynt-cloud-prod-lake
+

@@ -1,0 +1,12 @@
+[platform]
+name = "ynt-cloud"
+account = "1594966724013997"
+region = "cn-shanghai"
+alias = "应天"
+description = "应天云平台主账号"
+code = "ynt"
+
+[tags]
+platform = "ynt-cloud"
+region = "cn-shanghai"
+

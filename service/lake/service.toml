@@ -1,0 +1,5 @@
+[service]
+name = "lake"
+alias = "洞庭"
+version = "0.0.1"
+description = "OSS storage infrastructure for YNT cloud platform"
