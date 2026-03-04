@@ -1,0 +1,6 @@
+name: network
+runtime: python
+description: YNT Cloud VPC network infrastructure using Pulumi
+
+# Stack naming: <platform_name>-<environ_code>-<service_name>-stack
+# Example: ynt-cloud-prod-network-stack

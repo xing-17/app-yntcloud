@@ -4,10 +4,17 @@ from pulumi import ComponentResource, ResourceOptions
 from xcloudmeta.centre import Overlay
 from xlog.stream.stream import LogStream
 
-from backend.storage.infrastructure import OssStorage
+from backend.networking.infrastructure import NetworkInfrastructure
 
 
 class Backend(ComponentResource):
+    """
+    网络基础设施后端组件
+    
+    管理以下资源：
+    - VPC 网络基础设施（VPC、VSwitch、Security Group）
+    """
+
     def __init__(
         self,
         name: str,
@@ -23,33 +30,27 @@ class Backend(ComponentResource):
         )
         self.overlay = overlay
         self.logstream = logstream
-        logstream.log(message="Initializing storage backend")
+        logstream.log(
+            message="Initializing network backend",
+            level="INFO",
+        )
 
-        # Create OSS storage infrastructure
-        self.storage = OssStorage(
-            name="storage",
+        # 创建网络基础设施
+        self.network = NetworkInfrastructure(
+            name="network",
             overlay=overlay,
             logstream=logstream,
             opts=ResourceOptions(parent=self),
         )
         logstream.log(
-            message="Storage backend initialization complete",
+            message="Network backend initialization complete",
             level="INFO",
         )
 
-        # Register all outputs once
-        self.register_outputs_bookmark = {
-            "oss/bucket/infralake/name": self.storage.infralake.bucket,
-            "oss/bucket/infralake/id": self.storage.infralake.id,
-            "oss/bucket/datalake/name": self.storage.datalake.bucket,
-            "oss/bucket/datalake/id": self.storage.datalake.id,
-        }
+        # 注册所有输出
+        self.register_outputs_bookmark = self.network.register_outputs_bookmark.copy()
         self.register_outputs(self.register_outputs_bookmark)
         logstream.log(
             message="Backend outputs registered",
             level="INFO",
-            context={
-                "outputs": list(self.register_outputs_bookmark.keys()),
-                "count": len(self.register_outputs_bookmark),
-            },
         )

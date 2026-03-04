@@ -5,6 +5,13 @@
 *.tfplan
 .terraform.lock.hcl
 
+# Pulumi
+.pulumi/
+Pulumi.*.yaml
+!Pulumi.yaml
+*.pulumi.json
+Outputs.yaml
+
 # Python
 __pycache__/
 *.py[cod]

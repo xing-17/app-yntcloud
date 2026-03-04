@@ -1,6 +1,6 @@
 # Makefile for Pulumi Deployment
-SERVICE_NAME := lake
-SERVICE_ALIAS := 洞庭
+SERVICE_NAME := network
+SERVICE_ALIAS := 驿传
 SERVICE_FULL_NAME := $(SERVICE_NAME)@$(SERVICE_ALIAS)
 PLATFORM_NAME := ynt-cloud
 
@@ -8,7 +8,7 @@ PLATFORM_NAME := ynt-cloud
 ENV ?= prod
 
 # Stack naming: <platform_name>-<environ_code>-<service_name>-stack
-# Example: ynt-cloud-prod-lake-stack
+# Example: ynt-cloud-prod-network-stack
 STACK := $(PLATFORM_NAME)-$(ENV)-$(SERVICE_NAME)-stack
 
 # Aliyun configuration
@@ -99,12 +99,12 @@ deploy:
 
 # Destroy resources
 destroy:
-	@echo "$(COLOR_RED)$(SERVICE_FULL_NAME) - Destroying $(STACK) [ENV=$(ENV)] ⚠️ $(COLOR_RESET)"
-	@echo "$(COLOR_YELLOW)Press Ctrl+C to cancel, or Enter to continue...$(COLOR_RESET)"
-	@read confirm
+	@echo "$(COLOR_RED)$(SERVICE_FULL_NAME) - WARNING: Destroying $(STACK) [ENV=$(ENV)]$(COLOR_RESET)"
+	@echo "$(COLOR_RED)This will delete all network infrastructure!$(COLOR_RESET)"
+	@read -p "Are you sure? (yes/no): " confirm && [ "$$confirm" = "yes" ]
 	@export PULUMI_CONFIG_PASSPHRASE="" && pulumi stack select $(STACK)
 	@export PULUMI_CONFIG_PASSPHRASE="" && pulumi destroy --yes
-	@echo "$(COLOR_GREEN)$(SERVICE_FULL_NAME) - ✅ $(STACK) destroyed OK $(COLOR_RESET)"
+	@echo "$(COLOR_YELLOW)$(SERVICE_FULL_NAME) - Stack destroyed$(COLOR_RESET)"
 
 # Preview changes
 preview:
@@ -114,11 +114,8 @@ preview:
 
 # Show stack status
 show:
-	@echo "$(COLOR_BLUE)Stack status: $(STACK) [ENV=$(ENV)]$(COLOR_RESET)"
+	@echo "$(COLOR_BLUE)$(SERVICE_FULL_NAME) - Status: $(STACK) [ENV=$(ENV)]$(COLOR_RESET)"
 	@export PULUMI_CONFIG_PASSPHRASE="" && pulumi stack select $(STACK)
-	@export PULUMI_CONFIG_PASSPHRASE="" && pulumi stack --show-ids
-	@echo ""
-	@echo "$(COLOR_GREEN)Stack outputs:$(COLOR_RESET)"
 	@export PULUMI_CONFIG_PASSPHRASE="" && pulumi stack output
 
 # Export outputs to YAML file
@@ -126,36 +123,44 @@ output:
 	@echo "$(COLOR_BLUE)$(SERVICE_FULL_NAME) - Exporting outputs: $(STACK) [ENV=$(ENV)]$(COLOR_RESET)"
 	@export PULUMI_CONFIG_PASSPHRASE="" && pulumi stack select $(STACK)
 	@echo "Outputs:" > Outputs.yaml
-	@export PULUMI_CONFIG_PASSPHRASE="" && pulumi stack output --json 2>/dev/null | python3 -c "import sys, json, yaml; data = json.load(sys.stdin); [print(f'  {k}: \"{v}\"' if isinstance(v, str) else f'  {k}: {v}') for k, v in sorted(data.items())]" >> Outputs.yaml 2>/dev/null || true
+	@export PULUMI_CONFIG_PASSPHRASE="" && pulumi stack output --json 2>/dev/null | python3 -c "import sys, json; data = json.load(sys.stdin); [print(f'  {k}: \"{v}\"' if isinstance(v, str) else f'  {k}: {v}') for k, v in sorted(data.items())]" >> Outputs.yaml 2>/dev/null || true
 	@echo "$(COLOR_GREEN)$(SERVICE_FULL_NAME) - ✅ Outputs exported to Outputs.yaml$(COLOR_RESET)"
 
-# Show configuration
+# Show stack configuration
 config:
-	@echo "$(COLOR_BLUE)Configuration: $(STACK) [ENV=$(ENV)]$(COLOR_RESET)"
+	@echo "$(COLOR_BLUE)$(SERVICE_FULL_NAME) - Config: $(STACK) [ENV=$(ENV)]$(COLOR_RESET)"
 	@export PULUMI_CONFIG_PASSPHRASE="" && pulumi stack select $(STACK)
 	@export PULUMI_CONFIG_PASSPHRASE="" && pulumi config
 
 # Refresh stack state
 refresh:
-	@echo "$(COLOR_BLUE)Refreshing stack: $(STACK) [ENV=$(ENV)]$(COLOR_RESET)"
+	@echo "$(COLOR_BLUE)$(SERVICE_FULL_NAME) - Refresh: $(STACK) [ENV=$(ENV)]$(COLOR_RESET)"
 	@export PULUMI_CONFIG_PASSPHRASE="" && pulumi stack select $(STACK)
 	@export PULUMI_CONFIG_PASSPHRASE="" && pulumi refresh --yes
-	@echo "$(COLOR_GREEN)✅ $(STACK) state refreshed OK $(COLOR_RESET)"
 
 # Clean local cache
 clean:
-	@echo "$(COLOR_BLUE)Cleaning ... $(COLOR_RESET)"
-	@rm -rf .pulumi/
-	@rm -rf __pycache__/
-	@rm -rf backend/__pycache__/
-	@rm -rf backend/storage/__pycache__/
+	@echo "$(COLOR_BLUE)$(SERVICE_FULL_NAME) - Cleaning...$(COLOR_RESET)"
 	@find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
-	@echo "$(COLOR_GREEN)✅ Cleaning OK $(COLOR_RESET)"
+	@find . -type f -name "*.pyc" -delete 2>/dev/null || true
+	@find . -type f -name "*.pyo" -delete 2>/dev/null || true
+	@echo "$(COLOR_GREEN)$(SERVICE_FULL_NAME) - ✅ Cleaned$(COLOR_RESET)"
 
-# linting and testing targets can be added here as needed
-lint:
-	@echo "$(COLOR_BLUE)Linting ... $(COLOR_RESET)"
-	@ruff format .
-	@ruff check . --fix
-	@ruff check .
-	@echo "$(COLOR_GREEN)✅ Linting OK $(COLOR_RESET)"
+# Quick shortcuts
+deploy-prod:
+	@$(MAKE) deploy ENV=prod
+
+deploy-dev:
+	@$(MAKE) deploy ENV=dev
+
+show-prod:
+	@$(MAKE) show ENV=prod
+
+show-dev:
+	@$(MAKE) show ENV=dev
+
+preview-prod:
+	@$(MAKE) preview ENV=prod
+
+preview-dev:
+	@$(MAKE) preview ENV=dev

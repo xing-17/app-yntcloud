@@ -2,5 +2,6 @@ name: lake
 runtime: python
 description: YNT Cloud storage infrastructure using Pulumi
 
-# ynt-cloud-prod-lake
+# Stack naming: <platform_name>-<environ_code>-<service_name>-stack
+# Example: ynt-cloud-prod-lake-stack
 

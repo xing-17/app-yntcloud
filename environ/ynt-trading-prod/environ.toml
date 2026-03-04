@@ -2,7 +2,7 @@
 name = "ynt-trading-prod"
 account = "1132272424860690"
 region = "cn-shanghai"
-alias = "应天prod"
+alias = "襄阳"
 description = "应天云交易生产环境账号"
 code = "prod"
 
@@ -10,6 +10,8 @@ code = "prod"
 environ = "ynt-trading-prod"
 region = "cn-shanghai"
 
+# ==================== OSS储存配置 ====================
+# 
 [environ.resources.oss.bucket.datalake]
 name = "{{ ref(environ.name) }}-datalake"
 tags = { resource_level = "Environ", name = "Datalake" }
@@ -17,3 +19,23 @@ tags = { resource_level = "Environ", name = "Datalake" }
 [environ.resources.oss.bucket.infralake]
 name = "{{ ref(environ.name) }}-infralake"
 tags = { resource_level = "Environ", name = "Infralake" }
+
+# ==================== 网络资源配置 ====================
+# VPC 虚拟私有云配置
+[environ.resources.network.vpc]
+name = "{{ ref(environ.name) }}-main"
+cidr = "10.0.0.0/16"
+tags = { resource_level = "Environ", name = "Main VPC" }
+
+# VSwitch 交换机配置（子网）
+[environ.resources.network.vswitch]
+name = "main"
+cidr = "10.0.1.0/24"
+zone_id = "cn-shanghai-l"  # 可用区 L（低成本区域）
+tags = { resource_level = "Environ", name = "Main VSwitch" }
+
+# Security Group 安全组配置
+[environ.resources.network.security_group]
+name = "data-service-group"
+tags = { resource_level = "Environ", name = "Data Service SG" }
+

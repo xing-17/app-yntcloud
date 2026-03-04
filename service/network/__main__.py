@@ -7,9 +7,9 @@ from backend.component import Backend
 from xcloudmeta.centre import Centre, Overlay
 from xlog import ColorTree, LogStream
 
-# Initialize logging stream
+# 初始化日志流
 stream = LogStream(
-    name="lake",
+    name="network",
     level="INFO",
     format=ColorTree(),
     verbose=True,
@@ -18,45 +18,45 @@ stream = LogStream(
 current = Path(__file__).parent.name
 stream.log(f"Starting Pulumi deployment for service: {current}")
 
-# Initialize Pulumi config
+# 初始化 Pulumi 配置
 config = pulumi.Config()
 
-# Initialize centre
+# 初始化 centre
 centre = Centre(root="../../")
 
-# Get Pulumi stack name
-# Expected format: <platform_name>-<environ_code>-<service_name>-stack
-# Example: ynt-cloud-prod-lake-stack
+# 获取 Pulumi stack 名称
+# 预期格式: <platform_name>-<environ_code>-<service_name>-stack
+# 示例: ynt-cloud-prod-network-stack
 stack_name = pulumi.get_stack()
 stream.log(f"Pulumi stack: {stack_name}")
 
 try:
-    # Try to retrieve from Pulumi config first
+    # 尝试从 Pulumi 配置中获取
     platform_name = config.get("platform")
     environ_name = config.get("environ")
     service_name = config.get("service")
 
     if not platform_name or not environ_name or not service_name:
-        # Parse from stack name to extract platform, environ, and service
-        # Stack name format: {platform_name}-{environ_code}-{service_name}-stack
-        # Example: ynt-cloud-prod-lake-stack
-        # Remove '-stack' suffix
+        # 从 stack 名称解析以提取 platform、environ 和 service
+        # Stack 名称格式: {platform_name}-{environ_code}-{service_name}-stack
+        # 示例: ynt-cloud-prod-network-stack
+        # 移除 '-stack' 后缀
         if not stack_name.endswith("-stack"):
             raise ValueError(
                 f"Invalid stack name format: {stack_name}. "
                 f"Expected format: <plt>-<env>-<svc>-stack"
             )
         
-        stack_base = stack_name[:-6]  # Remove '-stack'
+        stack_base = stack_name[:-6]  # 移除 '-stack'
         
-        # Try to match platform name from the beginning
+        # 尝试从开头匹配平台名称
         platform = None
         for plat in centre.list_platform():
             plat_name = plat.get_name()
             if stack_base.startswith(plat_name + "-"):
                 platform = plat
                 platform_name = plat_name
-                # Remove platform name and following dash
+                # 移除平台名称和后面的短横线
                 remaining = stack_base[len(plat_name) + 1:]
                 break
         
@@ -66,7 +66,7 @@ try:
                 f"Available platforms: {[p.name for p in centre.list_platform()]}"
             )
         
-        # Try to match service name from the end of remaining string
+        # 尝试从剩余字符串的末尾匹配服务名称
         service = None
         service_name = None
         for svc in centre.list_service():
@@ -74,13 +74,13 @@ try:
             if remaining.endswith("-" + svc_name):
                 service = svc
                 service_name = svc_name
-                # Remove service name and preceding dash
+                # 移除服务名称和前面的短横线
                 environ_code = remaining[:-len(svc_name) - 1]
                 break
         
         if not service:
-            # Fallback: use current directory as service name
-            # Assume remaining is: {environ_code}-{service_name}
+            # 降级处理：使用当前目录作为服务名称
+            # 假设剩余的是: {environ_code}-{service_name}
             parts = remaining.split("-")
             if len(parts) >= 2:
                 environ_code = "-".join(parts[:-1])
@@ -96,14 +96,14 @@ try:
                 level="WARNING",
             )
         
-        # Verify service matches current directory
+        # 验证服务是否匹配当前目录
         if service_name != current:
             stream.log(
                 message=f"Warning: Stack service '{service_name}' != directory '{current}'",
                 level="WARNING",
             )
         
-        # Find environ by code
+        # 通过代码查找环境
         environ = centre.get_environ(environ_code)
         if not environ:
             raise ValueError(
@@ -122,7 +122,7 @@ try:
             },
         )
     else:
-        # Config provided, get modules by name
+        # 提供了配置，通过名称获取模块
         platform = centre.get_platform(platform_name)
         environ = centre.get_environ(environ_name)
 
@@ -141,7 +141,7 @@ try:
         },
     )
 
-    # Create overlay
+    # 创建 overlay
     overlay: Overlay = centre.overlay(
         platform=platform.name,
         environ=environ.name,
@@ -149,7 +149,7 @@ try:
     )
     overlay.validate()
 
-    # Verify stack name matches expected format
+    # 验证 stack 名称是否匹配预期格式
     expected_stack_id = overlay.get_stack_id()
     if stack_name != expected_stack_id:
         stream.log(
@@ -171,14 +171,14 @@ try:
         context=overlay.describe(),
     )
 
-    # Create backend resources using stack ID from overlay
+    # 使用来自 overlay 的 stack ID 创建后端资源
     backend = Backend(
         name=overlay.get_stack_id(),
         overlay=overlay,
         logstream=stream,
     )
 
-    # Export stack outputs
+    # 导出 stack 输出
     pulumi.export("stack_id", overlay.get_stack_id())
     pulumi.export("platform_name", platform_name)
     pulumi.export("platform_code", platform.get_code())
@@ -188,7 +188,7 @@ try:
     pulumi.export("region", environ.get_region())
     pulumi.export("account", environ.get_account())
 
-    # Export bucket information - ADD MORE INFO AS NEEDED
+    # 导出网络信息 - 供其他服务依赖
     for key, value in backend.register_outputs_bookmark.items():
         pulumi.export(key, value)
 
