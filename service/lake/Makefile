@@ -1,7 +1,9 @@
 # Makefile for Pulumi Deployment
-SERVICE_NAME := lake
-SERVICE_ALIAS := 洞庭
+SERVICE_NAME := $(shell grep '^name' service.toml | head -1 | cut -d '"' -f2)
+SERVICE_ALIAS := $(shell grep '^alias' service.toml | head -1 | cut -d '"' -f2)
+SERVICE_VERS := $(shell grep '^version' service.toml | head -1 | cut -d '"' -f2)
 SERVICE_FULL_NAME := $(SERVICE_NAME)@$(SERVICE_ALIAS)
+CONDA_ENV := app-yntcloud
 PLATFORM_NAME := ynt-cloud
 
 # Default environment (can be overridden: make deploy ENV=prod)
@@ -10,9 +12,6 @@ ENV ?= prod
 # Stack naming: <platform_name>-<environ_code>-<service_name>-stack
 # Example: ynt-cloud-prod-lake-stack
 STACK := $(PLATFORM_NAME)-$(ENV)-$(SERVICE_NAME)-stack
-
-# Aliyun configuration
-REGION := cn-shanghai
 
 # Colors for output
 COLOR_RESET := \033[0m
@@ -73,27 +72,27 @@ help:
 # List all stacks
 list:
 	@echo "$(COLOR_BLUE)Available stacks:$(COLOR_RESET)"
-	@export PULUMI_CONFIG_PASSPHRASE="" && pulumi stack ls
+	@export PULUMI_CONFIG_PASSPHRASE="" && conda run -n $(CONDA_ENV) pulumi stack ls
 
 # Login to Pulumi
 login:
 	@echo "$(COLOR_BLUE)$(SERVICE_FULL_NAME) - Login local backend ...$(COLOR_RESET)"
-	@export PULUMI_CONFIG_PASSPHRASE="" && pulumi login --local
+	@export PULUMI_CONFIG_PASSPHRASE="" && conda run -n $(CONDA_ENV) pulumi login --local
 	@echo "$(COLOR_GREEN)$(SERVICE_FULL_NAME) - ✅ Login OK$(COLOR_RESET)"
 
 # Initialize stack
 init: login
 	@echo "$(COLOR_BLUE)$(SERVICE_FULL_NAME) - Initializing $(STACK) [ENV=$(ENV)]$(COLOR_RESET)"
-	@export PULUMI_CONFIG_PASSPHRASE="" && pulumi stack init $(STACK) 2>/dev/null || \
+	@export PULUMI_CONFIG_PASSPHRASE="" && conda run -n $(CONDA_ENV) pulumi stack init $(STACK) 2>/dev/null || \
 		echo "$(COLOR_YELLOW)Stack $(STACK) already exists$(COLOR_RESET)"
-	@export PULUMI_CONFIG_PASSPHRASE="" && pulumi stack select $(STACK)
+	@export PULUMI_CONFIG_PASSPHRASE="" && conda run -n $(CONDA_ENV) pulumi stack select $(STACK)
 	@echo "$(COLOR_GREEN)$(SERVICE_FULL_NAME) - ✅ $(STACK) ready$(COLOR_RESET)"
 
 # Deploy to environment
 deploy:
 	@echo "$(COLOR_BLUE)$(SERVICE_FULL_NAME) - Deploying: $(STACK) [ENV=$(ENV)]$(COLOR_RESET)"
-	@export PULUMI_CONFIG_PASSPHRASE="" && pulumi stack select $(STACK)
-	@export PULUMI_CONFIG_PASSPHRASE="" && pulumi up --yes
+	@export PULUMI_CONFIG_PASSPHRASE="" && conda run -n $(CONDA_ENV) pulumi stack select $(STACK)
+	@export PULUMI_CONFIG_PASSPHRASE="" && conda run -n $(CONDA_ENV) pulumi up --yes
 	@echo "$(COLOR_GREEN)$(SERVICE_FULL_NAME) - ✅ $(STACK) deployed OK $(COLOR_RESET)"
 	@$(MAKE) output ENV=$(ENV)
 
@@ -102,44 +101,44 @@ destroy:
 	@echo "$(COLOR_RED)$(SERVICE_FULL_NAME) - Destroying $(STACK) [ENV=$(ENV)] ⚠️ $(COLOR_RESET)"
 	@echo "$(COLOR_YELLOW)Press Ctrl+C to cancel, or Enter to continue...$(COLOR_RESET)"
 	@read confirm
-	@export PULUMI_CONFIG_PASSPHRASE="" && pulumi stack select $(STACK)
-	@export PULUMI_CONFIG_PASSPHRASE="" && pulumi destroy --yes
+	@export PULUMI_CONFIG_PASSPHRASE="" && conda run -n $(CONDA_ENV) pulumi stack select $(STACK)
+	@export PULUMI_CONFIG_PASSPHRASE="" && conda run -n $(CONDA_ENV) pulumi destroy --yes
 	@echo "$(COLOR_GREEN)$(SERVICE_FULL_NAME) - ✅ $(STACK) destroyed OK $(COLOR_RESET)"
 
 # Preview changes
 preview:
 	@echo "$(COLOR_BLUE)$(SERVICE_FULL_NAME) - Preview: $(STACK) [ENV=$(ENV)]$(COLOR_RESET)"
-	@export PULUMI_CONFIG_PASSPHRASE="" && pulumi stack select $(STACK)
-	@export PULUMI_CONFIG_PASSPHRASE="" && pulumi preview
+	@export PULUMI_CONFIG_PASSPHRASE="" && conda run -n $(CONDA_ENV) pulumi stack select $(STACK)
+	@export PULUMI_CONFIG_PASSPHRASE="" && conda run -n $(CONDA_ENV) pulumi preview
 
 # Show stack status
 show:
 	@echo "$(COLOR_BLUE)Stack status: $(STACK) [ENV=$(ENV)]$(COLOR_RESET)"
-	@export PULUMI_CONFIG_PASSPHRASE="" && pulumi stack select $(STACK)
-	@export PULUMI_CONFIG_PASSPHRASE="" && pulumi stack --show-ids
+	@export PULUMI_CONFIG_PASSPHRASE="" && conda run -n $(CONDA_ENV) pulumi stack select $(STACK)
+	@export PULUMI_CONFIG_PASSPHRASE="" && conda run -n $(CONDA_ENV) pulumi stack --show-ids
 	@echo ""
 	@echo "$(COLOR_GREEN)Stack outputs:$(COLOR_RESET)"
-	@export PULUMI_CONFIG_PASSPHRASE="" && pulumi stack output
+	@export PULUMI_CONFIG_PASSPHRASE="" && conda run -n $(CONDA_ENV) pulumi stack output
 
 # Export outputs to YAML file
 output:
 	@echo "$(COLOR_BLUE)$(SERVICE_FULL_NAME) - Exporting outputs: $(STACK) [ENV=$(ENV)]$(COLOR_RESET)"
-	@export PULUMI_CONFIG_PASSPHRASE="" && pulumi stack select $(STACK)
+	@export PULUMI_CONFIG_PASSPHRASE="" && conda run -n $(CONDA_ENV) pulumi stack select $(STACK)
 	@echo "Outputs:" > Outputs.yaml
-	@export PULUMI_CONFIG_PASSPHRASE="" && pulumi stack output --json 2>/dev/null | python3 -c "import sys, json, yaml; data = json.load(sys.stdin); [print(f'  {k}: \"{v}\"' if isinstance(v, str) else f'  {k}: {v}') for k, v in sorted(data.items())]" >> Outputs.yaml 2>/dev/null || true
+	@export PULUMI_CONFIG_PASSPHRASE="" && conda run -n $(CONDA_ENV) pulumi stack output --json 2>/dev/null | python3 -c "import sys, json, yaml; data = json.load(sys.stdin); [print(f'  {k}: \"{v}\"' if isinstance(v, str) else f'  {k}: {v}') for k, v in sorted(data.items())]" >> Outputs.yaml 2>/dev/null || true
 	@echo "$(COLOR_GREEN)$(SERVICE_FULL_NAME) - ✅ Outputs exported to Outputs.yaml$(COLOR_RESET)"
 
 # Show configuration
 config:
 	@echo "$(COLOR_BLUE)Configuration: $(STACK) [ENV=$(ENV)]$(COLOR_RESET)"
-	@export PULUMI_CONFIG_PASSPHRASE="" && pulumi stack select $(STACK)
-	@export PULUMI_CONFIG_PASSPHRASE="" && pulumi config
+	@export PULUMI_CONFIG_PASSPHRASE="" && conda run -n $(CONDA_ENV) pulumi stack select $(STACK)
+	@export PULUMI_CONFIG_PASSPHRASE="" && conda run -n $(CONDA_ENV) pulumi config
 
 # Refresh stack state
 refresh:
 	@echo "$(COLOR_BLUE)Refreshing stack: $(STACK) [ENV=$(ENV)]$(COLOR_RESET)"
-	@export PULUMI_CONFIG_PASSPHRASE="" && pulumi stack select $(STACK)
-	@export PULUMI_CONFIG_PASSPHRASE="" && pulumi refresh --yes
+	@export PULUMI_CONFIG_PASSPHRASE="" && conda run -n $(CONDA_ENV) pulumi stack select $(STACK)
+	@export PULUMI_CONFIG_PASSPHRASE="" && conda run -n $(CONDA_ENV) pulumi refresh --yes
 	@echo "$(COLOR_GREEN)✅ $(STACK) state refreshed OK $(COLOR_RESET)"
 
 # Clean local cache
@@ -155,7 +154,7 @@ clean:
 # linting and testing targets can be added here as needed
 lint:
 	@echo "$(COLOR_BLUE)Linting ... $(COLOR_RESET)"
-	@ruff format .
-	@ruff check . --fix
-	@ruff check .
+	@conda run -n $(CONDA_ENV) ruff format .
+	@conda run -n $(CONDA_ENV) ruff check . --fix
+	@conda run -n $(CONDA_ENV) ruff check .
 	@echo "$(COLOR_GREEN)✅ Linting OK $(COLOR_RESET)"

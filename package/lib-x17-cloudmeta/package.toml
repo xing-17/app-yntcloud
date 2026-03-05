@@ -1,0 +1,5 @@
+[package]
+name = "lib-x17-cloudmeta"
+version = "latest"
+where = "../../../../libs/lib-x17-cloudmeta"
+editable = true

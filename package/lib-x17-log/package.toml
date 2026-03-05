@@ -1,0 +1,5 @@
+[package]
+name = "lib-x17-log"
+version = "latest"
+where = "../../../../libs/lib-x17-log"
+editable = true
