@@ -1,0 +1,3 @@
+[submodule "service/servers/finconnect/backend/server/source/app-finconnect"]
+	path = service/servers/finconnect/backend/server/source/app-finconnect
+	url = https://github.com/xing-17/app-finconnect.git

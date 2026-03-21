@@ -1,0 +1,19 @@
+[service]
+name = "server-finconnect"
+alias = "玉门"
+version = "0.0.1"
+description = "FinConnect server for YNT Cloud"
+
+[service.reference.stack.network]
+name = "organization/network/{{ ref(platform.name) }}-{{ ref(environ.code) }}-network-stack"
+
+[service.instance.app-finconnect]
+instance_id = "i-uf6fhsebk3h32jxjeo0p"
+instance_name = "app-finconnect"
+instance_type = "ecs.e-c1m1.large"
+[service.instance.app-finconnect.image]
+registry = "registry.cn-shanghai.aliyuncs.com"  # 阿里云容器镜像服务的域名
+namespace = "ynt-cloud"                         # 你的命名空间
+repository = "finconnect"                       # 镜像仓库名称
+tag = "latest"                                  # 或使用版本号如 "v1.0.0"
+
