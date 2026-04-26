@@ -32,10 +32,7 @@ class Backend(ComponentResource):
             logstream=logstream,
             opts=ResourceOptions(parent=self),
         )
-        logstream.log(
-            message="Storage backend initialization complete",
-            level="INFO",
-        )
+        logstream.log(message="Storage backend initialization complete")
 
         # Register all outputs once
         self.register_outputs_bookmark = {
@@ -44,7 +41,6 @@ class Backend(ComponentResource):
         self.register_outputs(self.register_outputs_bookmark)
         logstream.log(
             message="Backend outputs registered",
-            level="INFO",
             context={
                 "outputs": list(self.register_outputs_bookmark.keys()),
                 "count": len(self.register_outputs_bookmark),
