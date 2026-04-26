@@ -1,5 +1,5 @@
 from __future__ import annotations
 
-from backend.networking.infrastructure import NetworkInfrastructure
+from backend.networking.infrastructure import NetworkInfra
 
-__all__ = ["NetworkInfrastructure"]
+__all__ = ["NetworkInfra"]

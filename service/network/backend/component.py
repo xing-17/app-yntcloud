@@ -4,15 +4,16 @@ from pulumi import ComponentResource, ResourceOptions
 from xcloudmeta.centre import Overlay
 from xlog.stream.stream import LogStream
 
-from backend.networking.infrastructure import NetworkInfrastructure
+from backend.networking.infrastructure import NetworkInfra
 
 
 class Backend(ComponentResource):
     """
     网络基础设施后端组件
-    
+
     管理以下资源：
     - VPC 网络基础设施（VPC、VSwitch、Security Group）
+
     """
 
     def __init__(
@@ -30,27 +31,26 @@ class Backend(ComponentResource):
         )
         self.overlay = overlay
         self.logstream = logstream
-        logstream.log(
-            message="Initializing network backend",
-            level="INFO",
-        )
+        logstream.log(message="Initializing network backend")
 
         # 创建网络基础设施
-        self.network = NetworkInfrastructure(
+        self.network = NetworkInfra(
             name="network",
             overlay=overlay,
             logstream=logstream,
             opts=ResourceOptions(parent=self),
         )
-        logstream.log(
-            message="Network backend initialization complete",
-            level="INFO",
-        )
+        logstream.log(message="Network backend initialization complete")
 
-        # 注册所有输出
-        self.register_outputs_bookmark = self.network.register_outputs_bookmark.copy()
+        # Register all outputs once
+        self.register_outputs_bookmark = {
+            **self.network.register_outputs_bookmark,
+        }
         self.register_outputs(self.register_outputs_bookmark)
         logstream.log(
             message="Backend outputs registered",
-            level="INFO",
+            context={
+                "outputs": list(self.register_outputs_bookmark.keys()),
+                "count": len(self.register_outputs_bookmark),
+            },
         )

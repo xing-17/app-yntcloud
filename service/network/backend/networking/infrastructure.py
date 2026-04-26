@@ -1,20 +1,20 @@
 from __future__ import annotations
 
-import pulumi_alicloud as alicloud
 from pulumi import ComponentResource, ResourceOptions
+from pulumi_alicloud import ecs, vpc
 from xcloudmeta.centre import Overlay
 from xlog.stream.stream import LogStream
 
 
-class NetworkInfrastructure(ComponentResource):
+class NetworkInfra(ComponentResource):
     """
     阿里云 VPC 网络基础设施组件
-    
+
     创建以下资源：
     - VPC: 虚拟私有云
     - VSwitch: 交换机（子网）
     - Security Group: 安全组
-    
+
     架构说明：
     - 极简设计，单 VPC + 单 VSwitch
     - 不创建 NAT Gateway 和 EIP（成本优化）
@@ -29,7 +29,7 @@ class NetworkInfrastructure(ComponentResource):
         opts: ResourceOptions | None = None,
     ):
         super().__init__(
-            "custom:alicloud:NetworkInfrastructure",
+            "custom:alicloud:NetworkInfra",
             name,
             None,
             opts,
@@ -37,7 +37,9 @@ class NetworkInfrastructure(ComponentResource):
         self.overlay = overlay
         self.logstream = logstream
 
+        # 获取配置命名空间
         ns = overlay.get_namespace()
+        environ_name = ns.get("environ.name")
         network_ns = ns.get("environ.resources.network")
 
         # ==================== VPC ====================
@@ -45,17 +47,16 @@ class NetworkInfrastructure(ComponentResource):
         vpc_ns = network_ns.get("vpc")
         vpc_name = vpc_ns.get("name")
         vpc_cidr = vpc_ns.get("cidr")
-        
-        self.vpc = alicloud.vpc.Network(
+        self.vpc = vpc.Network(
             resource_name=vpc_name,
             vpc_name=vpc_name,
             cidr_block=vpc_cidr,
-            description=f"VPC for {overlay.get_namespace().get('environ.name')}",
+            description=f"VPC for {environ_name}",
             tags=vpc_ns.get("tags").to_dict(),
             opts=ResourceOptions(parent=self),
         )
         logstream.log(
-            message=f"VPC created: {vpc_name} ({vpc_cidr})",
+            message=f"VPC Network created: {vpc_name} ({vpc_cidr})",
             level="INFO",
         )
 
@@ -65,8 +66,7 @@ class NetworkInfrastructure(ComponentResource):
         vswitch_name = vswitch_ns.get("name")
         vswitch_cidr = vswitch_ns.get("cidr")
         zone_id = vswitch_ns.get("zone_id")
-        
-        self.vswitch = alicloud.vpc.Switch(
+        self.vswitch = vpc.Switch(
             resource_name=vswitch_name,
             vswitch_name=vswitch_name,
             vpc_id=self.vpc.id,
@@ -77,7 +77,7 @@ class NetworkInfrastructure(ComponentResource):
             opts=ResourceOptions(parent=self),
         )
         logstream.log(
-            message=f"VSwitch created: {vswitch_name} ({vswitch_cidr}) in zone {zone_id}",
+            message=f"VPC VSwitch created: {vswitch_name} ({vswitch_cidr}) in zone {zone_id}",
             level="INFO",
         )
 
@@ -85,17 +85,17 @@ class NetworkInfrastructure(ComponentResource):
         # 创建数据服务安全组 - 开放所有流量（适用于数据采集、爬虫等场景）
         sg_ns = network_ns.get("security_group")
         sg_name = sg_ns.get("name")
-        self.security_group = alicloud.ecs.SecurityGroup(
+        self.security_group = ecs.SecurityGroup(
             resource_name=sg_name,
-            name=sg_name,
+            security_group_name=sg_name,
             description="Security group for data services - allows all traffic",
             vpc_id=self.vpc.id,
             tags=sg_ns.get("tags").to_dict(),
             opts=ResourceOptions(parent=self),
         )
-        
+
         # 入站规则：允许所有流量
-        self.sg_rule_ingress = alicloud.ecs.SecurityGroupRule(
+        self.sg_rule_ingress = ecs.SecurityGroupRule(
             resource_name=f"{sg_name}-ingress-all",
             type="ingress",
             ip_protocol="all",
@@ -108,9 +108,9 @@ class NetworkInfrastructure(ComponentResource):
             description="Allow all inbound traffic",
             opts=ResourceOptions(parent=self.security_group),
         )
-        
+
         # 出站规则：允许所有流量
-        self.sg_rule_egress = alicloud.ecs.SecurityGroupRule(
+        self.sg_rule_egress = ecs.SecurityGroupRule(
             resource_name=f"{sg_name}-egress-all",
             type="egress",
             ip_protocol="all",
@@ -123,7 +123,7 @@ class NetworkInfrastructure(ComponentResource):
             description="Allow all outbound traffic",
             opts=ResourceOptions(parent=self.security_group),
         )
-        
+
         logstream.log(
             message=f"Security Group created: {sg_name} (allows all traffic)",
             level="INFO",
@@ -142,10 +142,9 @@ class NetworkInfrastructure(ComponentResource):
             "vswitch/zone_id": self.vswitch.zone_id,
             # Security Group 输出
             "security_group/id": self.security_group.id,
-            "security_group/name": self.security_group.name,
+            "security_group/name": self.security_group.security_group_name,
         }
         self.register_outputs(self.register_outputs_bookmark)
-        
         logstream.log(
             message="Network infrastructure outputs registered",
             level="INFO",

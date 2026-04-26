@@ -7,15 +7,14 @@ from backend.component import Backend
 from xcloudmeta.centre import Centre, Overlay
 from xlog import ColorTree, LogStream
 
-# 初始化日志流
+# Initialize logging stream
+current = Path(__file__).parent.name
 stream = LogStream(
-    name="network",
+    name=current,
     level="INFO",
     format=ColorTree(),
     verbose=True,
 )
-
-current = Path(__file__).parent.name
 stream.log(f"Starting Pulumi deployment for service: {current}")
 
 # 初始化 Pulumi 配置
@@ -43,12 +42,11 @@ try:
         # 移除 '-stack' 后缀
         if not stack_name.endswith("-stack"):
             raise ValueError(
-                f"Invalid stack name format: {stack_name}. "
-                f"Expected format: <plt>-<env>-<svc>-stack"
+                f"Invalid stack name format: {stack_name}. Expected format: <plt>-<env>-<svc>-stack"
             )
-        
+
         stack_base = stack_name[:-6]  # 移除 '-stack'
-        
+
         # 尝试从开头匹配平台名称
         platform = None
         for plat in centre.list_platform():
@@ -57,15 +55,15 @@ try:
                 platform = plat
                 platform_name = plat_name
                 # 移除平台名称和后面的短横线
-                remaining = stack_base[len(plat_name) + 1:]
+                remaining = stack_base[len(plat_name) + 1 :]
                 break
-        
+
         if not platform:
             raise ValueError(
                 f"Could not identify platform from stack name: {stack_name}. "
                 f"Available platforms: {[p.name for p in centre.list_platform()]}"
             )
-        
+
         # 尝试从剩余字符串的末尾匹配服务名称
         service = None
         service_name = None
@@ -75,9 +73,9 @@ try:
                 service = svc
                 service_name = svc_name
                 # 移除服务名称和前面的短横线
-                environ_code = remaining[:-len(svc_name) - 1]
+                environ_code = remaining[: -len(svc_name) - 1]
                 break
-        
+
         if not service:
             # 降级处理：使用当前目录作为服务名称
             # 假设剩余的是: {environ_code}-{service_name}
@@ -90,19 +88,19 @@ try:
                     f"Could not parse stack name: {stack_name}. "
                     f"Expected format: <platform_name>-<environ_code>-<service_name>-stack"
                 )
-            
+
             stream.log(
                 message=f"Service '{service_name}' not found in centre, using parsed value",
                 level="WARNING",
             )
-        
+
         # 验证服务是否匹配当前目录
         if service_name != current:
             stream.log(
                 message=f"Warning: Stack service '{service_name}' != directory '{current}'",
                 level="WARNING",
             )
-        
+
         # 通过代码查找环境
         environ = centre.get_environ(environ_code)
         if not environ:
@@ -111,7 +109,7 @@ try:
                 f"Available environs: {[(e.name, e.get_code()) for e in centre.list_environ()]}"
             )
         environ_name = environ.name
-        
+
         stream.log(
             message="Parsed stack name",
             context={
@@ -128,7 +126,7 @@ try:
 
     if not platform:
         raise ValueError(f"Platform '{platform_name}' not found")
-    
+
     if not environ:
         raise ValueError(f"Environment '{environ_name}' not found")
 
