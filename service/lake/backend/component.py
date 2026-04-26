@@ -39,10 +39,7 @@ class Backend(ComponentResource):
 
         # Register all outputs once
         self.register_outputs_bookmark = {
-            "oss/bucket/infralake/name": self.storage.infralake.bucket,
-            "oss/bucket/infralake/id": self.storage.infralake.id,
-            "oss/bucket/datalake/name": self.storage.datalake.bucket,
-            "oss/bucket/datalake/id": self.storage.datalake.id,
+            **self.storage.register_outputs_bookmark,
         }
         self.register_outputs(self.register_outputs_bookmark)
         logstream.log(
