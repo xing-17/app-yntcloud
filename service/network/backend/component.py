@@ -31,7 +31,7 @@ class Backend(ComponentResource):
         )
         self.overlay = overlay
         self.logstream = logstream
-        logstream.log(message="Initializing network backend")
+        logstream.log(message="Initializing backend component")
 
         # 创建网络基础设施
         self.network = NetworkInfra(
@@ -40,7 +40,7 @@ class Backend(ComponentResource):
             logstream=logstream,
             opts=ResourceOptions(parent=self),
         )
-        logstream.log(message="Network backend initialization complete")
+        logstream.log(message="Network backend initialization OK")
 
         # Register all outputs once
         self.register_outputs_bookmark = {

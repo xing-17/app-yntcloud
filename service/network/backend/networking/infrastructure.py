@@ -32,7 +32,7 @@ class NetworkInfra(ComponentResource):
             "custom:alicloud:NetworkInfra",
             name,
             None,
-            opts,
+            opts=opts,
         )
         self.overlay = overlay
         self.logstream = logstream
@@ -55,10 +55,7 @@ class NetworkInfra(ComponentResource):
             tags=vpc_ns.get("tags").to_dict(),
             opts=ResourceOptions(parent=self),
         )
-        logstream.log(
-            message=f"VPC Network created: {vpc_name} ({vpc_cidr})",
-            level="INFO",
-        )
+        logstream.log(message=f"VPC Network {vpc_name} created OK ({vpc_cidr})")
 
         # ==================== VSwitch ====================
         # 创建 VSwitch - 交换机（等同于 AWS 的 Subnet）
@@ -66,37 +63,36 @@ class NetworkInfra(ComponentResource):
         vswitch_name = vswitch_ns.get("name")
         vswitch_cidr = vswitch_ns.get("cidr")
         zone_id = vswitch_ns.get("zone_id")
+        description = f"VSwitch for {environ_name} in zone {zone_id}"
         self.vswitch = vpc.Switch(
             resource_name=vswitch_name,
             vswitch_name=vswitch_name,
             vpc_id=self.vpc.id,
             cidr_block=vswitch_cidr,
             zone_id=zone_id,
-            description=f"VSwitch for {overlay.get_namespace().get('environ.name')}",
+            description=description,
             tags=vswitch_ns.get("tags").to_dict(),
             opts=ResourceOptions(parent=self),
         )
-        logstream.log(
-            message=f"VPC VSwitch created: {vswitch_name} ({vswitch_cidr}) in zone {zone_id}",
-            level="INFO",
-        )
+        logstream.log(message=f"VPC VSwitch {vswitch_name} at {zone_id} created OK.")
 
         # ==================== Security Groups ====================
-        # 创建数据服务安全组 - 开放所有流量（适用于数据采集、爬虫等场景）
+        # 创建数据服务安全组 - 白名单策略（只允许可信来源访问）
         sg_ns = network_ns.get("security_group")
         sg_name = sg_ns.get("name")
         self.security_group = ecs.SecurityGroup(
             resource_name=sg_name,
             security_group_name=sg_name,
-            description="Security group for data services - allows all traffic",
+            description="Security group with whitelist policy - allows trusted sources only",
             vpc_id=self.vpc.id,
             tags=sg_ns.get("tags").to_dict(),
             opts=ResourceOptions(parent=self),
         )
 
-        # 入站规则：允许所有流量
-        self.sg_rule_ingress = ecs.SecurityGroupRule(
-            resource_name=f"{sg_name}-ingress-all",
+        # ==================== 入站规则 - 白名单策略 ====================
+        # Priority 1（最高优先级）- 允许悉尼 IP 访问所有端口
+        self.sg_rule_allow_trusted_ip = ecs.SecurityGroupRule(
+            resource_name=f"{sg_name}-allow-trusted-ip",
             type="ingress",
             ip_protocol="all",
             nic_type="intranet",
@@ -104,12 +100,26 @@ class NetworkInfra(ComponentResource):
             port_range="-1/-1",
             priority=1,
             security_group_id=self.security_group.id,
-            cidr_ip="0.0.0.0/0",
-            description="Allow all inbound traffic",
+            cidr_ip="59.102.115.55/32",
+            description="Allow trusted IP to access all ports",
+            opts=ResourceOptions(parent=self.security_group),
+        )
+        # Priority 1 - 允许 VPC 内网全互通（涵盖了所有 VSwitch）
+        self.sg_rule_allow_vpc = ecs.SecurityGroupRule(
+            resource_name=f"{sg_name}-allow-vpc",
+            type="ingress",
+            ip_protocol="all",
+            nic_type="intranet",
+            policy="accept",
+            port_range="-1/-1",
+            priority=1,
+            security_group_id=self.security_group.id,
+            cidr_ip=vpc_cidr,
+            description="Allow VPC internal network to access all ports",
             opts=ResourceOptions(parent=self.security_group),
         )
 
-        # 出站规则：允许所有流量
+        # ==================== 出站规则 - 允许所有出站 ====================
         self.sg_rule_egress = ecs.SecurityGroupRule(
             resource_name=f"{sg_name}-egress-all",
             type="egress",
@@ -123,11 +133,7 @@ class NetworkInfra(ComponentResource):
             description="Allow all outbound traffic",
             opts=ResourceOptions(parent=self.security_group),
         )
-
-        logstream.log(
-            message=f"Security Group created: {sg_name} (allows all traffic)",
-            level="INFO",
-        )
+        logstream.log(message=f"Security group {sg_name} created OK")
 
         # 注册所有输出
         self.register_outputs_bookmark = {
@@ -145,7 +151,4 @@ class NetworkInfra(ComponentResource):
             "security_group/name": self.security_group.security_group_name,
         }
         self.register_outputs(self.register_outputs_bookmark)
-        logstream.log(
-            message="Network infrastructure outputs registered",
-            level="INFO",
-        )
+        logstream.log(message="Outputs registered OK")
