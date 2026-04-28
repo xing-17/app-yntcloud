@@ -23,7 +23,7 @@ class Backend(ComponentResource):
         )
         self.overlay = overlay
         self.logstream = logstream
-        logstream.log(message="Initializing storage backend")
+        logstream.log(message="Initializing backend component")
 
         # Create OSS storage infrastructure
         self.storage = OssStorage(
@@ -32,7 +32,7 @@ class Backend(ComponentResource):
             logstream=logstream,
             opts=ResourceOptions(parent=self),
         )
-        logstream.log(message="Storage backend initialization complete")
+        logstream.log(message="Storage backend initialization OK")
 
         # Register all outputs once
         self.register_outputs_bookmark = {
