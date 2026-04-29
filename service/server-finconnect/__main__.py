@@ -8,14 +8,13 @@ from xcloudmeta.centre import Centre, Overlay
 from xlog import ColorTree, LogStream
 
 # Initialize logging stream
+current = Path(__file__).parent.name
 stream = LogStream(
-    name="server-finconnect",
+    name=current,
     level="INFO",
     format=ColorTree(),
     verbose=True,
 )
-
-current = Path(__file__).parent.name
 stream.log(f"Starting Pulumi deployment for service: {current}")
 
 # Initialize Pulumi config
@@ -43,12 +42,11 @@ try:
         # Remove '-stack' suffix
         if not stack_name.endswith("-stack"):
             raise ValueError(
-                f"Invalid stack name format: {stack_name}. "
-                f"Expected format: <plt>-<env>-<svc>-stack"
+                f"Invalid stack name format: {stack_name}. Expected format: <plt>-<env>-<svc>-stack"
             )
-        
+
         stack_base = stack_name[:-6]  # Remove '-stack'
-        
+
         # Try to match platform name from the beginning
         platform = None
         for plat in centre.list_platform():
@@ -57,15 +55,15 @@ try:
                 platform = plat
                 platform_name = plat_name
                 # Remove platform name and following dash
-                remaining = stack_base[len(plat_name) + 1:]
+                remaining = stack_base[len(plat_name) + 1 :]
                 break
-        
+
         if not platform:
             raise ValueError(
                 f"Could not identify platform from stack name: {stack_name}. "
                 f"Available platforms: {[p.name for p in centre.list_platform()]}"
             )
-        
+
         # Try to match service name from the end of remaining string
         service = None
         service_name = None
@@ -75,9 +73,9 @@ try:
                 service = svc
                 service_name = svc_name
                 # Remove service name and preceding dash
-                environ_code = remaining[:-len(svc_name) - 1]
+                environ_code = remaining[: -len(svc_name) - 1]
                 break
-        
+
         if not service:
             # Fallback: use current directory as service name
             # Assume remaining is: {environ_code}-{service_name}
@@ -90,19 +88,19 @@ try:
                     f"Could not parse stack name: {stack_name}. "
                     f"Expected format: <platform_name>-<environ_code>-<service_name>-stack"
                 )
-            
+
             stream.log(
                 message=f"Service '{service_name}' not found in centre, using parsed value",
                 level="WARNING",
             )
-        
+
         # Verify service matches current directory
         if service_name != current:
             stream.log(
                 message=f"Warning: Stack service '{service_name}' != directory '{current}'",
                 level="WARNING",
             )
-        
+
         # Find environ by code
         environ = centre.get_environ(environ_code)
         if not environ:
@@ -111,7 +109,7 @@ try:
                 f"Available environs: {[(e.name, e.get_code()) for e in centre.list_environ()]}"
             )
         environ_name = environ.name
-        
+
         stream.log(
             message="Parsed stack name",
             context={
@@ -128,7 +126,7 @@ try:
 
     if not platform:
         raise ValueError(f"Platform '{platform_name}' not found")
-    
+
     if not environ:
         raise ValueError(f"Environment '{environ_name}' not found")
 

@@ -7,13 +7,62 @@ description = "FinConnect server for YNT Cloud"
 [service.reference.stack.network]
 name = "organization/network/{{ ref(platform.name) }}-{{ ref(environ.code) }}-network-stack"
 
-[service.instance.app-finconnect]
+[service.ecs.instance.app-finconnect]
 instance_id = "i-uf6fhsebk3h32jxjeo0p"
 instance_name = "app-finconnect"
 instance_type = "ecs.e-c1m1.large"
-[service.instance.app-finconnect.image]
-registry = "registry.cn-shanghai.aliyuncs.com"  # 阿里云容器镜像服务的域名
-namespace = "ynt-cloud"                         # 你的命名空间
-repository = "finconnect"                       # 镜像仓库名称
-tag = "latest"                                  # 或使用版本号如 "v1.0.0"
+secret_name = "ecs/server/app-finconnect/keys"
+
+# ============================================================================
+# 函数计算 (FC 3.0) — 核心调度函数
+# ============================================================================
+
+[service.fc.function.finconnect-run-batch]
+function_name = "finconnect-run-batch"
+runtime = "python3.12"
+handler = "handler.main"
+memory_size = 512
+timeout = 21600
+description = "FinConnect Run Batch Function"
+[service.fc.function.finconnect-run-batch.env_vars]
+OOS_SECRET_NAME = "{{ ref(service.ecs.instance.app-finconnect.secret_name) }}"
+REGION_ID = "{{ ref(environ.region) }}"
+SERVER_NAME = "{{ ref(service.ecs.instance.app-finconnect.instance_name) }}"
+TIMEZONE_AREA = "Asia/Shanghai"
+
+[service.fc.function.finconnect-start-ecs-instance]
+function_name = "finconnect-start-ecs-instance"
+runtime = "python3.12"
+handler = "handler.main"
+memory_size = 512
+timeout = 900
+description = "FinConnect Start ECS Instance Function"
+[service.fc.function.finconnect-start-ecs-instance.env_vars]
+REGION_ID = "{{ ref(environ.region) }}"
+SERVER_NAME = "{{ ref(service.ecs.instance.app-finconnect.instance_name) }}"
+
+[service.fc.function.finconnect-stop-ecs-instance]
+function_name = "finconnect-stop-ecs-instance"
+runtime = "python3.12"
+handler = "handler.main"
+memory_size = 512
+timeout = 900
+description = "FinConnect Stop ECS Instance Function"
+[service.fc.function.finconnect-stop-ecs-instance.env_vars]
+REGION_ID = "{{ ref(environ.region) }}"
+SERVER_NAME = "{{ ref(service.ecs.instance.app-finconnect.instance_name) }}"
+
+[service.fc.schedule.finconnect-full-extract-weekdays]
+name = "finconnect-full-extract-weekdays"
+enabled = true
+cron = "CRON_TZ=Asia/Shanghai 0 0 23 * * *"  # ✅ UTC 15:00 = 北京时间 23:00
+description = "FinConnect Full Extract Schedule for Weekdays"
+function_name = "{{ ref(service.fc.function.finconnect-run-batch.function_name) }}"
+
+[service.fc.schedule.finconnect-premarket-extract-weekdays]
+name = "finconnect-premarket-extract-weekdays"
+enabled = true
+cron = "CRON_TZ=Asia/Shanghai 0 30 8 * * *"  # ✅ UTC 00:30 = 北京时间 08:30
+description = "FinConnect Premarket Extract Schedule for Weekdays"
+function_name = "{{ ref(service.fc.function.finconnect-run-batch.function_name) }}"
 
