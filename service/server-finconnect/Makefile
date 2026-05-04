@@ -133,6 +133,7 @@ config:
 	@echo "$(COLOR_BLUE)Configuration: $(STACK) [ENV=$(ENV)]$(COLOR_RESET)"
 	@export PULUMI_CONFIG_PASSPHRASE="" && conda run -n $(CONDA_ENV) pulumi stack select $(STACK)
 	@export PULUMI_CONFIG_PASSPHRASE="" && conda run -n $(CONDA_ENV) pulumi config
+	@export PULUMI_CONFIG_PASSPHRASE="" && conda run -n $(CONDA_ENV) pulumi config set alicloud:skipRegionValidation false
 
 # Refresh stack state
 refresh:

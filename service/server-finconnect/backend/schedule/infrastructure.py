@@ -139,7 +139,8 @@ class ScheduleInfra(ComponentResource):
                             "output_names": ["oss-main"],
                             "params": {},
                             "wait": True,
-                            "offset": 0,
+                            "date_offset": 0,
+                            "conn_type": "private",
                         }
                     ),
                 }
@@ -176,14 +177,19 @@ class ScheduleInfra(ComponentResource):
                             "output_names": ["oss-main"],
                             "params": {},
                             "wait": True,
-                            "offset": 0,
+                            "date_offset": 0,
+                            "conn_type": "private",
                         }
                     ),
                 }
             ),
             opts=ResourceOptions(
                 parent=self,
-                depends_on=[self.trigger_role, trigger_policy],
+                depends_on=[
+                    self.trigger_role,
+                    trigger_policy,
+                    self.full_extract_weekdays_trigger,
+                ],
             ),
         )
         logstream.log(message=f"Schedule {full_extract_weekdays_name} created OK")

@@ -7,6 +7,9 @@ description = "FinConnect server for YNT Cloud"
 [service.reference.stack.network]
 name = "organization/network/{{ ref(platform.name) }}-{{ ref(environ.code) }}-network-stack"
 
+[service.reference.stack.storage]
+name = "organization/lake/{{ ref(platform.name) }}-{{ ref(environ.code) }}-lake-stack"
+
 [service.ecs.instance.app-finconnect]
 instance_id = "i-uf6fhsebk3h32jxjeo0p"
 instance_name = "app-finconnect"
@@ -14,55 +17,92 @@ instance_type = "ecs.e-c1m1.large"
 secret_name = "ecs/server/app-finconnect/keys"
 
 # ============================================================================
+# 函数计算 (FC 3.0) — 私有 Layer 定义
+# ============================================================================
+# [service.core.layer.alicloud-ecs]
+# name = "{{ ref(service.name) }}-alicloud-ecs"
+# description = "Alibaba Cloud ECS SDK Layer"
+# runtime = "python3.12"
+# requirements = [
+#     "alibabacloud-ecs20140526==7.7.0"
+# ]
+
+[service.core.layer.alicloud-oos]
+name = "{{ ref(service.name) }}-alicloud-oos"
+description = "Alibaba Cloud OOS SDK Layer"
+runtime = "python3.12"
+requirements = [
+    "alibabacloud-oos20190601>=3.7.0"
+]
+
+# ============================================================================
 # 函数计算 (FC 3.0) — 核心调度函数
 # ============================================================================
-
 [service.fc.function.finconnect-run-batch]
-function_name = "finconnect-run-batch"
+name = "finconnect-run-batch"
+description = "FinConnect Run Batch Function"
 runtime = "python3.12"
 handler = "handler.main"
-memory_size = 512
+memory = 512
 timeout = 21600
-description = "FinConnect Run Batch Function"
+layers = [
+    "acs:fc:cn-shanghai:official:layers/Python312-Aliyun-SDK/versions/1",
+    "{{ ref(service.core.layer.alicloud-oos.name) }}",
+]
 [service.fc.function.finconnect-run-batch.env_vars]
-OOS_SECRET_NAME = "{{ ref(service.ecs.instance.app-finconnect.secret_name) }}"
+PYTHONPATH="/opt/python"
+PATH="/var/fc/lang/python3.12/bin:/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/bin"
+OOS_SECRET = "{{ ref(service.ecs.instance.app-finconnect.secret_name) }}"
 REGION_ID = "{{ ref(environ.region) }}"
 SERVER_NAME = "{{ ref(service.ecs.instance.app-finconnect.instance_name) }}"
 TIMEZONE_AREA = "Asia/Shanghai"
 
+
 [service.fc.function.finconnect-start-ecs-instance]
-function_name = "finconnect-start-ecs-instance"
+name = "finconnect-start-ecs-instance"
 runtime = "python3.12"
 handler = "handler.main"
-memory_size = 512
+memory = 256
 timeout = 900
 description = "FinConnect Start ECS Instance Function"
+layers = [
+    "acs:fc:cn-shanghai:official:layers/Python312-Aliyun-SDK/versions/1"
+]
 [service.fc.function.finconnect-start-ecs-instance.env_vars]
+PYTHONPATH="/opt/python"
+PATH="/var/fc/lang/python3.12/bin:/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/bin"
 REGION_ID = "{{ ref(environ.region) }}"
 SERVER_NAME = "{{ ref(service.ecs.instance.app-finconnect.instance_name) }}"
 
 [service.fc.function.finconnect-stop-ecs-instance]
-function_name = "finconnect-stop-ecs-instance"
+name = "finconnect-stop-ecs-instance"
+description = "FinConnect Stop ECS Instance Function"
 runtime = "python3.12"
 handler = "handler.main"
-memory_size = 512
+memory = 256
 timeout = 900
-description = "FinConnect Stop ECS Instance Function"
+layers = [
+    "acs:fc:cn-shanghai:official:layers/Python312-Aliyun-SDK/versions/1"
+]
 [service.fc.function.finconnect-stop-ecs-instance.env_vars]
+PYTHONPATH="/opt/python"
+PATH="/var/fc/lang/python3.12/bin:/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/bin"
 REGION_ID = "{{ ref(environ.region) }}"
 SERVER_NAME = "{{ ref(service.ecs.instance.app-finconnect.instance_name) }}"
 
+# ============================================================================
+# 函数计算 (FC 3.0) — 定时调度配置
+# ============================================================================
 [service.fc.schedule.finconnect-full-extract-weekdays]
 name = "finconnect-full-extract-weekdays"
 enabled = true
 cron = "CRON_TZ=Asia/Shanghai 0 0 23 * * *"  # ✅ UTC 15:00 = 北京时间 23:00
 description = "FinConnect Full Extract Schedule for Weekdays"
-function_name = "{{ ref(service.fc.function.finconnect-run-batch.function_name) }}"
+function_name = "{{ ref(service.fc.function.finconnect-run-batch.name) }}"
 
 [service.fc.schedule.finconnect-premarket-extract-weekdays]
 name = "finconnect-premarket-extract-weekdays"
 enabled = true
 cron = "CRON_TZ=Asia/Shanghai 0 30 8 * * *"  # ✅ UTC 00:30 = 北京时间 08:30
 description = "FinConnect Premarket Extract Schedule for Weekdays"
-function_name = "{{ ref(service.fc.function.finconnect-run-batch.function_name) }}"
-
+function_name = "{{ ref(service.fc.function.finconnect-run-batch.name) }}"

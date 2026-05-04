@@ -19,6 +19,24 @@ from alibabacloud_tea_util import models as UtilModels
 
 
 def main(event, context):
+    """
+    FinConnect Run Batch Function
+
+    Request schema:
+    {
+    "payload": {
+    "sources": ["tushare_stock_companies", "tushare_stock_profiles"],
+    "provider": "tushare",
+    "output_names": ["oss-main"],
+    "params": {},
+    "use_cache": true,
+    "date_offset": 0,
+    "conn_type": "private",
+    "wait": true
+    }
+    }
+    """
+
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger()
     logger.info("FC Function started OK.")
@@ -26,17 +44,16 @@ def main(event, context):
     # ----------------------------
     # Retrive session variables
     # ----------------------------
-    oss_secret = os.environ.get("OOS_SECRET")
+    oos_secret = os.environ.get("OOS_SECRET")
     region_id = os.environ.get("REGION_ID")
     server_name = os.environ.get("SERVER_NAME")
     timezone_area = os.environ.get("TIMEZONE_AREA", "Asia/Shanghai")
 
     # Retrive context credentials
-    creds = context.credentials
     config = OpenApiModels.Config(
-        access_key_id=creds.access_key_id,
-        access_key_secret=creds.access_key_secret,
-        security_token=creds.security_token,
+        access_key_id=os.environ.get("ALIBABA_CLOUD_ACCESS_KEY_ID"),
+        access_key_secret=os.environ.get("ALIBABA_CLOUD_ACCESS_KEY_SECRET"),
+        security_token=os.environ.get("ALIBABA_CLOUD_SECURITY_TOKEN"),
         region_id=region_id,
     )
 
@@ -60,7 +77,7 @@ def main(event, context):
     try:
         response: OosModels.GetSecretParameterResponse = oos.get_secret_parameter_with_options(
             request=OosModels.GetSecretParameterRequest(
-                name=oss_secret,
+                name=oos_secret,
                 region_id=region_id,
                 with_decryption=True,
             ),
@@ -73,7 +90,7 @@ def main(event, context):
         logger.info(f"API key retrieved OK: {server_key_mask}")
         logger.info(f"API port retrieved OK: {server_api_port}")
     except Exception as e:
-        raise RuntimeError(f"OOS Secret {oss_secret} retrieve failed: {e}") from e
+        raise RuntimeError(f"OOS Secret {oos_secret} retrieve failed: {e}") from e
 
     # ------------------------------------------------------
     # Server Lookup
@@ -116,7 +133,7 @@ def main(event, context):
         date_offset = int(payload.get("date_offset", 0))
 
         # Run params
-        conn_type = os.environ.get("conn_type", "public")
+        conn_type = payload.get("conn_type", "public")
         wait = payload.get("wait", False)
         timeout = int(payload.get("timeout", 21600))
         interval = int(payload.get("interval", 60))
@@ -237,20 +254,3 @@ def main(event, context):
         "code": 200,
         "batch_id": batch_id,
     }
-
-
-# event=json.dumps({
-#     "payload": {
-#         "sources": [
-#             "tushare_calendar_tradedates",
-#             "tushare_stock_companies",
-#             "tushare_stock_profiles",
-#         ],
-#         "provider": "tushare",
-#         "output_names": ["oss-main"],
-#         "params": {},
-#         "use_cache": False,
-#         "wait": True,
-#     }
-# }).encode("utf-8")
-# print(main(event=event, context=None))

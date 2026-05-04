@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-import json
-
 import pulumi
 from pulumi import ComponentResource, ResourceOptions
-from pulumi_alicloud import ecs, oos
+from pulumi_alicloud import ecs
 from xcloudmeta.centre import Overlay
 from xlog.stream.stream import LogStream
 
@@ -60,22 +58,9 @@ class ECSInfra(ComponentResource):
 
         # ------------------------------------------------------
         # Retrive existing OOS secret
-        # - GET: secret: dict
         # ------------------------------------------------------
         instance_name = "app-finconnect"
-        secret_name = f"ecs/server/{instance_name}/keys"
-        try:
-            lookup_result: oos.GetSecretParametersResult = oos.get_secret_parameters(
-                secret_parameter_name=secret_name,
-                with_decryption=True,
-                enable_details=True,
-            )
-            parameter: oos.SecretParameter = lookup_result.parameters[0]
-            secret: dict = json.loads(parameter.value)
-            ssh_key_name = secret["ssh_key_name"]
-            logstream.log(message=f"OOS secret loaded OK: {secret_name}")
-        except Exception as e:
-            raise RuntimeError(f"Failed to load OOS secret '{secret_name}': {e}") from e
+        ssh_key_name = "app-finconnect"
 
         # ------------------------------------------------------
         # Create FinConnect infrastructure on existing instance
@@ -84,34 +69,21 @@ class ECSInfra(ComponentResource):
         instance_ns = ns.get("service.ecs.instance.app-finconnect")
         self.instance_id = instance_ns.get("instance_id")
         self.instance_type = instance_ns.get("instance_type")
-        try:
-            lookup_result: ecs.GetInstancesResult = ecs.get_instances(
-                ids=[self.instance_id],
-            )
-            loaded_instance: ecs.GetInstancesResult = lookup_result.instances[0]
-        except Exception as e:
-            raise RuntimeError(f"Failed to load ECS instance '{self.instance_id}': {e}") from e
-
-        try:
-            # 尝试查询现有的pulumi资源
-            imported = pulumi.runtime.is_dry_run()
-            import_id = self.instance_id if not imported else None
-        except Exception:
-            import_id = self.instance_id
-
         self.instance = ecs.Instance(
             resource_name=f"{instance_name}",
             instance_name=instance_name,
-            instance_type=loaded_instance.instance_type,
+            instance_type="ecs.e-c1m1.large",  # loaded_instance.instance_type,
             security_groups=[security_group_id],
             vpc_id=vpc_id,
             vswitch_id=vswitch_id,
-            image_id=loaded_instance.image_id,
+            image_id="aliyun_3_x64_20G_container_optimized_alibase_20260122.vhd",  # loaded_instance.image_id,
             key_name=ssh_key_name,
             tags=ns.get("tags").to_dict(),
             opts=ResourceOptions(
                 parent=self,
-                import_=import_id,
+                import_=self.instance_id,
+                protect=True,
+                retain_on_delete=True,
             ),
         )
 

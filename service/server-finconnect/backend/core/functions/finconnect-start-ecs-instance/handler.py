@@ -44,11 +44,10 @@ def main(event, context):
     server_name = os.environ.get("SERVER_NAME")
 
     # Retrive context credentials
-    creds = context.credentials
     config = OpenApiModels.Config(
-        access_key_id=creds.access_key_id,
-        access_key_secret=creds.access_key_secret,
-        security_token=creds.security_token,
+        access_key_id=os.environ.get("ALIBABA_CLOUD_ACCESS_KEY_ID"),
+        access_key_secret=os.environ.get("ALIBABA_CLOUD_ACCESS_KEY_SECRET"),
+        security_token=os.environ.get("ALIBABA_CLOUD_SECURITY_TOKEN"),
         region_id=region_id,
     )
 
@@ -157,11 +156,3 @@ def main(event, context):
         "instance_id": instance_id,
         "message": f"Instance {instance_id} started OK",
     }
-
-
-# main(event=json.dumps({
-#     "payload": {
-#         "timeout": 900,
-#         "interval": 10,
-#     }
-# }).encode('utf-8'), context=None)

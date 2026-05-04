@@ -4,4 +4,6 @@ description: YNT Cloud storage infrastructure using Pulumi
 
 # Stack naming: <platform_name>-<environ_code>-<service_name>-stack
 # Example: ynt-cloud-prod-server-finconnect-stack
-
+config:
+  alicloud:region:
+    value: cn-shanghai

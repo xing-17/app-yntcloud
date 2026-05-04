@@ -34,15 +34,16 @@ class Backend(ComponentResource):
         )
         self.overlay = overlay
         self.logstream = logstream
+        self.register_outputs_bookmark = {}
         logstream.log(message="Initializing backend component")
 
-        # 创建ECS基础设施
         self.ecsinfra = ECSInfra(
             name="instances",
             overlay=overlay,
             logstream=logstream,
             opts=ResourceOptions(parent=self),
         )
+        self.register_outputs_bookmark.update(self.ecsinfra.register_outputs_bookmark)
         logstream.log(message="ECS backend initialization OK")
 
         self.core = CoreFCInfra(
@@ -51,6 +52,7 @@ class Backend(ComponentResource):
             logstream=logstream,
             opts=ResourceOptions(parent=self),
         )
+        self.register_outputs_bookmark.update(self.core.register_outputs_bookmark)
         logstream.log(message="Core backend initialization complete")
 
         self.schedule = ScheduleInfra(
@@ -59,17 +61,15 @@ class Backend(ComponentResource):
             logstream=logstream,
             opts=ResourceOptions(
                 parent=self,
-                depends_on=[self.core, self.ecsinfra],
+                depends_on=[
+                    self.core,
+                    self.ecsinfra,
+                ],
             ),
         )
+        self.register_outputs_bookmark.update(self.schedule.register_outputs_bookmark)
         logstream.log(message="Schedule backend initialization complete")
 
-        # Register all outputs
-        self.register_outputs_bookmark = {
-            **self.ecsinfra.register_outputs_bookmark,
-            **self.core.register_outputs_bookmark,
-            **self.schedule.register_outputs_bookmark,
-        }
         self.register_outputs(self.register_outputs_bookmark)
         logstream.log(
             message="Backend outputs registered",
