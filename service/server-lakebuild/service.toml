@@ -1,0 +1,75 @@
+[service]
+name = "server-lakebuild"
+alias = "江陵"
+version = "1.0.0"
+description = "LakeBuild Server for OSS duckdbt ETLs"
+
+[service.reference.stack.network]
+name = "organization/network/{{ ref(platform.name) }}-{{ ref(environ.code) }}-network-stack"
+
+[service.reference.stack.storage]
+name = "organization/lake/{{ ref(platform.name) }}-{{ ref(environ.code) }}-lake-stack"
+
+# ============================================================================
+# ECS Instance — LakeBuild Server (按量付费 / Pay-As-You-Go)
+# ============================================================================
+[service.ecs.instance.app-lakebuild]
+instance_name = "app-lakebuild"
+instance_type = "ecs.u1-c1m2.3xlarge"
+zone_id = "cn-shanghai-l"
+instance_charge_type = "PostPaid"   # 按量付费
+image_id = "aliyun_3_x64_20G_alibase_20260326.vhd"
+ssh_key_name = "app-lakebuild"
+[service.ecs.instance.app-lakebuild.system_disk]
+category = "cloud_essd"             # ESSD云盘
+size = 40
+[service.ecs.instance.app-lakebuild.eip]
+bandwidth = 10
+internet_charge_type = "PayByTraffic"  # 按流量计费（低频使用更省）
+
+# ============================================================================
+# 函数计算 (FC 3.0) — 私有 Layer 定义
+# ============================================================================
+[service.core.layer.alicloud-oos]
+name = "{{ ref(service.name) }}-alicloud-oos"
+description = "Alibaba Cloud OOS SDK Layer"
+runtime = "python3.12"
+requirements = [
+    "alibabacloud-oos20190601>=3.7.0"
+]
+
+# ============================================================================
+# 函数计算 (FC 3.0) — 核心调度函数
+# ============================================================================
+# Layer 依赖关系
+[service.fc.function.lakebuild-start-ecs-instance]
+name = "lakebuild-start-ecs-instance"
+runtime = "python3.12"
+handler = "handler.main"
+memory_size = 128
+timeout = 900
+description = "LakeBuild Start ECS instance Function"
+layers = [
+    "acs:fc:cn-shanghai:official:layers/Python312-Aliyun-SDK/versions/1"
+]
+[service.fc.function.lakebuild-start-ecs-instance.env_vars]
+PYTHONPATH="/opt/python"
+PATH="/var/fc/lang/python3.12/bin:/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/bin"
+SERVER_NAME = "{{ ref(service.ecs.instance.app-lakebuild.instance_name) }}"
+REGION_ID = "{{ ref(environ.region) }}"
+
+[service.fc.function.lakebuild-stop-ecs-instance]
+name = "lakebuild-stop-ecs-instance"
+runtime = "python3.12"
+handler = "handler.main"
+memory_size = 128
+timeout = 900
+description = "LakeBuild Stop ECS instance Function"
+layers = [
+    "acs:fc:cn-shanghai:official:layers/Python312-Aliyun-SDK/versions/1"
+]
+[service.fc.function.lakebuild-stop-ecs-instance.env_vars]
+PYTHONPATH="/opt/python"
+PATH="/var/fc/lang/python3.12/bin:/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/bin"
+SERVER_NAME = "{{ ref(service.ecs.instance.app-lakebuild.instance_name) }}"
+REGION_ID = "{{ ref(environ.region) }}"
