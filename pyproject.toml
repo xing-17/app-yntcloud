@@ -12,8 +12,10 @@ requires-python = ">=3.11"
 
 dependencies = [
     "pulumi>=3.0.0",
+    "pulumi_command>=1.0.0",
     "pulumi-alicloud>=3.0.0",
-    "aliyun-python-sdk-core",
+    "tomlkit>=0.11.0",
+    "alibabacloud-fc20230330",
     "lib-x17-cloudmeta>=0.0.1",
     "lib-x17-log>=0.0.1"
 ]
@@ -29,7 +31,11 @@ packages = []
 dev = [
     "pytest>=8.0.0",
     "pytest-cov>=5.0.0",
-    "ruff>=0.5.0"
+    "ruff>=0.5.0",
+    "alibabacloud_oos20190601",
+    "alibabacloud_ecs20140526",
+    "alibabacloud_tea_openapi",
+    "alibabacloud_tea_util",
 ]
 
 [tool.ruff]

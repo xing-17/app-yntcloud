@@ -11,7 +11,7 @@ environ = "ynt-trading-prod"
 region = "cn-shanghai"
 
 # ==================== OSS储存配置 ====================
-# 
+# 数据湖存储桶配置
 [environ.resources.oss.bucket.datalake]
 name = "{{ ref(environ.name) }}-datalake"
 tags = { resource_level = "Environ", name = "Datalake" }
