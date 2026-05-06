@@ -100,7 +100,7 @@ class NetworkInfra(ComponentResource):
             port_range="-1/-1",
             priority=1,
             security_group_id=self.security_group.id,
-            cidr_ip="59.102.115.55/32",
+            cidr_ip="203.166.239.21/32",
             description="Allow trusted IP to access all ports",
             opts=ResourceOptions(parent=self.security_group),
         )

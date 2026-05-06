@@ -1,5 +1,5 @@
 [service]
 name = "network"
 alias = "驿传"
-version = "0.0.1"
+version = "1.0.0"
 description = "VPC network infrastructure for YNT cloud platform"
