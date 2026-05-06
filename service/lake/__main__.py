@@ -3,7 +3,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import pulumi
-import pulumi_alicloud
 from backend.component import Backend
 from xcloudmeta.centre import Centre, Overlay
 from xlog import ColorTree, LogStream
@@ -170,35 +169,11 @@ try:
         context=overlay.describe(),
     )
 
-    # Configure Alicloud Provider with extended timeouts for large deployments
-    # This is crucial for uploading large Lambda/FC packages (e.g., with dependencies)
-    alicloud_config = pulumi.Config("alicloud")
-    alicloud_provider = pulumi_alicloud.Provider(
-        resource_name="alicloud-provider",
-        account_id=environ.get_account(),
-        account_type="Domestic",
-        region=environ.get_region(),
-        access_key=alicloud_config.require("accessKey"),
-        secret_key=alicloud_config.require_secret("secretKey"),
-        client_read_timeout=300,  # 5 minutes read timeout (in seconds)
-        client_connect_timeout=60,  # 1 minute connect timeout (in seconds)
-    )
-    stream.log(
-        message="Alicloud Provider configured with extended timeouts",
-        context={
-            "client_read_timeout": "300s (5min)",
-            "client_connect_timeout": "60s (1min)",
-        },
-    )
-
     # Create backend resources using stack ID from overlay
     backend = Backend(
         name=overlay.get_stack_id(),
         overlay=overlay,
         logstream=stream,
-        opts=pulumi.ResourceOptions(
-            provider=alicloud_provider,
-        ),
     )
 
     # Export stack outputs
