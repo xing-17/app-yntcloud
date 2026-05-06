@@ -99,7 +99,7 @@ def main(event, context):
         }
 
     # ------------------------------------------------------
-    # Start instance
+    # Stop instance
     # ------------------------------------------------------
     try:
         ecs.stop_instance_with_options(
@@ -108,9 +108,9 @@ def main(event, context):
             ),
             runtime=UtilModels.RuntimeOptions(autoretry=True),
         )
-        logger.info(f"StartInstance sent OK: {instance_id}")
+        logger.info(f"StopInstance sent OK: {instance_id}")
     except Exception as e:
-        raise RuntimeError(f"Failed to start '{instance_id}': {e}") from e
+        raise RuntimeError(f"Failed to stop '{instance_id}': {e}") from e
 
     # ------------------------------------------------------
     # Wait instance

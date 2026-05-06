@@ -1,7 +1,7 @@
 [service]
 name = "server-finconnect"
 alias = "玉门"
-version = "0.0.1"
+version = "1.0.0"
 description = "FinConnect server for YNT Cloud"
 
 [service.reference.stack.network]
@@ -10,6 +10,9 @@ name = "organization/network/{{ ref(platform.name) }}-{{ ref(environ.code) }}-ne
 [service.reference.stack.storage]
 name = "organization/lake/{{ ref(platform.name) }}-{{ ref(environ.code) }}-lake-stack"
 
+# ============================================================================
+# ECS Instance — FinConnect Server (已存在实例)
+# ============================================================================
 [service.ecs.instance.app-finconnect]
 instance_id = "i-uf6fhsebk3h32jxjeo0p"
 instance_name = "app-finconnect"
@@ -19,14 +22,6 @@ secret_name = "ecs/server/app-finconnect/keys"
 # ============================================================================
 # 函数计算 (FC 3.0) — 私有 Layer 定义
 # ============================================================================
-# [service.core.layer.alicloud-ecs]
-# name = "{{ ref(service.name) }}-alicloud-ecs"
-# description = "Alibaba Cloud ECS SDK Layer"
-# runtime = "python3.12"
-# requirements = [
-#     "alibabacloud-ecs20140526==7.7.0"
-# ]
-
 [service.core.layer.alicloud-oos]
 name = "{{ ref(service.name) }}-alicloud-oos"
 description = "Alibaba Cloud OOS SDK Layer"
@@ -62,7 +57,7 @@ TIMEZONE_AREA = "Asia/Shanghai"
 name = "finconnect-start-ecs-instance"
 runtime = "python3.12"
 handler = "handler.main"
-memory = 256
+memory = 128
 timeout = 900
 description = "FinConnect Start ECS Instance Function"
 layers = [
@@ -79,7 +74,7 @@ name = "finconnect-stop-ecs-instance"
 description = "FinConnect Stop ECS Instance Function"
 runtime = "python3.12"
 handler = "handler.main"
-memory = 256
+memory = 128
 timeout = 900
 layers = [
     "acs:fc:cn-shanghai:official:layers/Python312-Aliyun-SDK/versions/1"
